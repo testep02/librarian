@@ -240,29 +240,60 @@ type techAttribute struct {
 
 func main() {
 
-	cfg := conf.Default()
-	cfg.LoggerConfig.LogLevel = logging.LevelDebug
+	/* This section begins setup for Split.io Feature Flagging */
+	cfg := conf.Default()                          // This creates a new splitio configuration that will be passed to the client
+	cfg.LoggerConfig.LogLevel = logging.LevelDebug // Set the logging level that will be output to the console
 
+	// This line of code creates a new splitio client and passes in the config created above
 	factory, err := client.NewSplitFactory("gjfmd11c290hph9j73bbp5jjpefn6gei5rmf", cfg)
 
-	//time.Sleep(time.Second)
-
+	// Check for any errors that occurred while creating the client
 	if err != nil {
 		fmt.Printf("SDK Init Error: %s\n", err)
 		return
 	}
 
+	// Here we grab the actual client from the factory that was created
 	client := factory.Client()
+	// It can take some time for the client to be ready, so we need to
+	// block the application until we are ready for the client to make
+	// requests. We can also do this in a channel to prevent blocking
+	// the entire app. That would be the preferred way to do it
 	err = client.BlockUntilReady(10)
 
+	// Check for any errors in client creation from the factory
 	if err != nil {
 		fmt.Println("Error getting client:", err)
 		return
 	}
 
-	//time.Sleep(time.Second)
+	/* 	A treatment is a flag
+	 	This call will bring back a string value
+		Possible values:
+			If user is in the QA group: "on"
+			If user is not in the QA group: "inBetween"
+			If no user is passed in: "off"
 
-	treatment := client.Treatment("Travis Estep", "print_devices", nil)
+		The "inBetween" value shows how the flag can have
+		a non-standard on/off value and how that value
+		can be tied to attributes or users that are
+		passed in.
+
+	*/
+
+	treatment := client.Treatment("", "print_devices", nil)
+	// To test this treatment, you can use these values:
+	//
+	// To evaluate to "on":
+	// Set first argument to any of these values:
+	//		- Lee Roy
+	// 		- Billy Bob
+	//		- Someone Else
+	// 		- Test User
+	//
+	// To evaluate to "inBetween":
+	// Set first argument to any string other than those
+	// listed above.
 
 	eagleFilePath, err := filepath.Abs("common.lbr")
 
@@ -287,25 +318,40 @@ func main() {
 		os.Exit(1)
 	}
 
-	var devices []deviceset = eagleDrawing.Library.Devicesets.Deviceset
+	devices := eagleDrawing.Library.Devicesets.Deviceset
 
+	/******************************************************************
+	*	This section evaluates the feature flag and executes code
+	*	based on the value that we get back
+	******************************************************************/
+
+	// If the user we pass in is in the QA group:
 	if treatment == "on" {
 		for d := range devices {
 			fmt.Println("Device Name:", devices[d].Name)
 		}
+		// There are no situations currently where the code
+		// will reach here
 	} else if treatment == "off" {
 		fmt.Println("Device listing is turned off.")
 		fmt.Println()
 		fmt.Println()
+		//If a user is passed in, but they are not in the QA group
 	} else if treatment == "inBetween" {
 		fmt.Println("Treatment is", treatment)
 		fmt.Println()
 		fmt.Println()
+		// If an empty string is passed in instead of a name
+		// this is the code that will be executed
 	} else {
 		fmt.Println("Device listing is neither on nor off....wtf??")
 		fmt.Println()
 		fmt.Println()
 	}
+
+	/******************************************************************
+	*	End feature flagging PoC section
+	******************************************************************/
 
 	fmt.Printf("The Layer Name setting is: %s", eagleDrawing.Layers.Layer[0].Name)
 	fmt.Println()
