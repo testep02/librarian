@@ -6,6 +6,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/splitio/go-client/splitio/client"
+	"github.com/splitio/go-client/splitio/conf"
+	"github.com/splitio/go-toolkit/logging"
 )
 
 type eagle struct {
@@ -235,6 +239,31 @@ type techAttribute struct {
 }
 
 func main() {
+
+	cfg := conf.Default()
+	cfg.LoggerConfig.LogLevel = logging.LevelDebug
+
+	factory, err := client.NewSplitFactory("gjfmd11c290hph9j73bbp5jjpefn6gei5rmf", cfg)
+
+	//time.Sleep(time.Second)
+
+	if err != nil {
+		fmt.Printf("SDK Init Error: %s\n", err)
+		return
+	}
+
+	client := factory.Client()
+	err = client.BlockUntilReady(10)
+
+	if err != nil {
+		fmt.Println("Error getting client:", err)
+		return
+	}
+
+	//time.Sleep(time.Second)
+
+	treatment := client.Treatment("Travis Estep", "print_devices", nil)
+
 	eagleFilePath, err := filepath.Abs("common.lbr")
 
 	if err != nil {
@@ -260,8 +289,22 @@ func main() {
 
 	var devices []deviceset = eagleDrawing.Library.Devicesets.Deviceset
 
-	for d := range devices {
-		fmt.Println("Device Name:", devices[d].Name)
+	if treatment == "on" {
+		for d := range devices {
+			fmt.Println("Device Name:", devices[d].Name)
+		}
+	} else if treatment == "off" {
+		fmt.Println("Device listing is turned off.")
+		fmt.Println()
+		fmt.Println()
+	} else if treatment == "inBetween" {
+		fmt.Println("Treatment is", treatment)
+		fmt.Println()
+		fmt.Println()
+	} else {
+		fmt.Println("Device listing is neither on nor off....wtf??")
+		fmt.Println()
+		fmt.Println()
 	}
 
 	fmt.Printf("The Layer Name setting is: %s", eagleDrawing.Layers.Layer[0].Name)
